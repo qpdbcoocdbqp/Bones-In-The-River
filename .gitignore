@@ -1,0 +1,18 @@
+# cache
+.env
+.env.*
+!.env.example
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
+.import_linter_cache/
+*.pyc
+*.log
+
+# folder
+out/
+examples/
+experiments/
+
+# custom
+dev/
