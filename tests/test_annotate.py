@@ -103,3 +103,25 @@ def test_markdown_header_warns_when_some_calls_failed():
     assert "result is incomplete" not in to_markdown(
         annotate(BODY, REFS, LLMVerifier(FakeClient(_respond)))
     )
+
+
+def test_screen_references_skips_failed_downloads_and_reports_their_url(tmp_path: Path):
+    import json
+
+    from factcheck.io import MIN_REF_CHARS, screen_references, write_manual_list
+
+    refs_dir = tmp_path / "refs"
+    refs_dir.mkdir()
+    good = Reference(id="r1", text="word " * MIN_REF_CHARS)
+    bad = Reference(id="r2", text="Failed to verify your browser")
+    entry = {"id": "r2", "title": "Talk", "url": "https://x.test/talk", "file": "refs/r2.md"}
+    (tmp_path / "sources.json").write_text(json.dumps([entry]), encoding="utf-8")
+
+    usable, skipped = screen_references([good, bad], refs_dir)
+    assert [r.id for r in usable] == ["r1"]
+    assert [(s.id, s.url) for s in skipped] == [("r2", "https://x.test/talk")]
+
+    write_manual_list(skipped, tmp_path / "manual_refs.md")
+    assert "https://x.test/talk" in (tmp_path / "manual_refs.md").read_text(encoding="utf-8")
+    write_manual_list([], tmp_path / "manual_refs.md")
+    assert not (tmp_path / "manual_refs.md").exists()

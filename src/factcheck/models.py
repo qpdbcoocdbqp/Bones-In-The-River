@@ -97,3 +97,22 @@ class GoldRow(BaseModel):
     sentence_id: str
     level: GoldLevel
     refs: frozenset[str] = frozenset()
+
+
+class RefResult(BaseModel):
+    """Outcome of downloading one reference link (one entry of sources.json)."""
+
+    id: str
+    title: str
+    url: str
+    file: str | None  # None when the download failed or the text was unusable
+    error: str | None = None
+
+
+class ManualRef(BaseModel):
+    """A reference whose content is unusable and has to be fetched by hand."""
+
+    id: str
+    title: str
+    url: str | None
+    reason: str
