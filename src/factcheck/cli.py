@@ -5,8 +5,10 @@ from typing import Annotated
 
 import typer
 
-from .annotate import annotate
-from .evaluate import (
+from .module.app.render import to_markdown
+from .module.app.sheet import sample_meta, sheet_rows
+from .module.cite.annotate import annotate
+from .module.cite.evaluate import (
     ANY_RELEVANT,
     FULL,
     GOLD_ANY,
@@ -18,8 +20,9 @@ from .evaluate import (
     sentence_ids,
     weights_from_meta,
 )
-from .fetch import BrowserFetcher, FetchError
-from .io import (
+from .module.cite.verifier import LLMVerifier
+from .module.refer.fetch import BrowserFetcher, FetchError
+from .module.refer.io import (
     MIN_REF_CHARS,
     load_annotation,
     load_body,
@@ -32,11 +35,8 @@ from .io import (
     write_outputs,
     write_sample_meta,
 )
-from .llm import LLMError, OpenAICompatClient
-from .prep import prep
-from .render import to_markdown
-from .sheet import sample_meta, sheet_rows
-from .verifier import LLMVerifier
+from .module.refer.prep import prep
+from .module.utils.llm import LLMError, OpenAICompatClient
 
 app = typer.Typer(add_completion=False, no_args_is_help=True)
 

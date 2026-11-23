@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 from typing import get_args
 
-from .models import (
+from factcheck.module.models import (
     Annotation,
     GoldLevel,
     GoldRow,

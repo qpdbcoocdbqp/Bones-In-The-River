@@ -5,7 +5,7 @@ import unicodedata
 from collections.abc import Iterator
 from functools import lru_cache
 
-from .models import Block, Sentence
+from factcheck.module.models import Block, Sentence
 
 MIN_QUOTE_CHARS = 12  # a normalized quote shorter than this is too short to prove anything
 

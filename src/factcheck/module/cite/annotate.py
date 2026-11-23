@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from collections.abc import Callable, Sequence
 
-from .models import Annotation, BlockResult, Reference, RunMeta, SentenceResult
-from .text import parse_body
+from factcheck.module.app.text import parse_body
+from factcheck.module.models import Annotation, BlockResult, Reference, RunMeta, SentenceResult
+
 from .verifier import Verifier
 
 

@@ -3,7 +3,8 @@ from pathlib import Path
 
 import pytest
 
-from factcheck.evaluate import (
+from factcheck.module.app.sheet import sample_sentences, sheet_rows
+from factcheck.module.cite.evaluate import (
     ANY_RELEVANT,
     FULL,
     GOLD_ANY,
@@ -13,8 +14,7 @@ from factcheck.evaluate import (
     score_sentences,
     weights_from_meta,
 )
-from factcheck.io import read_gold, write_label_sheet
-from factcheck.models import (
+from factcheck.module.models import (
     Annotation,
     Block,
     BlockResult,
@@ -26,7 +26,7 @@ from factcheck.models import (
     Sentence,
     SentenceResult,
 )
-from factcheck.sheet import sample_sentences, sheet_rows
+from factcheck.module.refer.io import read_gold, write_label_sheet
 
 
 def _result(sid: str, *judgements: tuple[str, Label]) -> SentenceResult:

@@ -49,9 +49,8 @@ name = "Layers: upper layers may import lower ones, siblings must not import eac
 type = "layers"
 layers = [
     "factcheck.cli",
-    "factcheck.annotate | factcheck.render | factcheck.evaluate | factcheck.sheet | factcheck.prep",
-    "factcheck.verifier",
-    "factcheck.io | factcheck.prompts | factcheck.llm | factcheck.fetch",
-    "factcheck.text",
-    "factcheck.models",
+    "factcheck.module.cite | factcheck.module.refer",
+    "factcheck.module.app",
+    "factcheck.module.utils",
+    "factcheck.module.models",
 ]

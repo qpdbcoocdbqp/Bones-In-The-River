@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from factcheck.fetch import FetchError, html_to_text, youtube_id
-from factcheck.prep import parse_clipping, prep, ref_id
+from factcheck.module.refer.fetch import FetchError, html_to_text, youtube_id
+from factcheck.module.refer.prep import parse_clipping, prep, ref_id
 
 CLIP = """---
 title: "AI 購物 | 曼報 Pro"

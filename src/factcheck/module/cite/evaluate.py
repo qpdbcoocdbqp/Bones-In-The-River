@@ -3,7 +3,14 @@ from __future__ import annotations
 from collections.abc import Collection, Mapping
 from dataclasses import dataclass
 
-from .models import Annotation, GoldLevel, GoldRow, Label, SampleMeta, SentenceResult
+from factcheck.module.models import (
+    Annotation,
+    GoldLevel,
+    GoldRow,
+    Label,
+    SampleMeta,
+    SentenceResult,
+)
 
 FULL: frozenset[Label] = frozenset({Label.SUPPORTED})
 ANY_RELEVANT: frozenset[Label] = frozenset({Label.SUPPORTED, Label.PARTIAL})

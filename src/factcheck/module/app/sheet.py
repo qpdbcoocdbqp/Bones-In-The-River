@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import random
 
-from .models import Annotation, Label, SampleMeta, SentenceResult
+from factcheck.module.models import Annotation, Label, SampleMeta, SentenceResult
 
 STRATA = ("supported", "partial", "none")
 

@@ -7,10 +7,11 @@ from typing import Any, Literal, Protocol
 
 from pydantic import BaseModel, Field, ValidationError, field_validator
 
-from .llm import LLMClient, LLMFormatError, LLMTransportError, complete_json
-from .models import Judgement, Label, Reference, Sentence
+from factcheck.module.app.text import chunk_spans, locate_quote, means_nothing
+from factcheck.module.models import Judgement, Label, Reference, Sentence
+from factcheck.module.utils.llm import LLMClient, LLMFormatError, LLMTransportError, complete_json
+
 from .prompts import PROMPT_VERSION, SYSTEM, build_confirm_prompt, build_judge_prompt
-from .text import chunk_spans, locate_quote, means_nothing
 
 # the prompt asks for ~300 chars; over twice that is nearly a whole-passage paste, not evidence for
 # "that sentence"

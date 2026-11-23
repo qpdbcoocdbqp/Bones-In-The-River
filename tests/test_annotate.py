@@ -3,11 +3,11 @@ from pathlib import Path
 
 import pytest
 
-from factcheck.annotate import annotate
-from factcheck.io import load_references, write_outputs
-from factcheck.models import Label, Reference
-from factcheck.render import NO_SOURCE, to_markdown
-from factcheck.verifier import LLMVerifier
+from factcheck.module.app.render import NO_SOURCE, to_markdown
+from factcheck.module.cite.annotate import annotate
+from factcheck.module.cite.verifier import LLMVerifier
+from factcheck.module.models import Label, Reference
+from factcheck.module.refer.io import load_references, write_outputs
 from tests.fakes import FakeClient
 
 BODY = "## 標題\n\n商家保有自己的顧客。入口由別人控制。\n\n與來源無關的推論。"
@@ -108,7 +108,7 @@ def test_markdown_header_warns_when_some_calls_failed():
 def test_screen_references_skips_failed_downloads_and_reports_their_url(tmp_path: Path):
     import json
 
-    from factcheck.io import MIN_REF_CHARS, screen_references, write_manual_list
+    from factcheck.module.refer.io import MIN_REF_CHARS, screen_references, write_manual_list
 
     refs_dir = tmp_path / "refs"
     refs_dir.mkdir()

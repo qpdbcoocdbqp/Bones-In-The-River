@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from .models import Sentence
+from factcheck.module.models import Sentence
 
 PROMPT_VERSION = "judge-v5"
 

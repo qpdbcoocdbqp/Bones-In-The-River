@@ -11,9 +11,10 @@ from urllib.parse import parse_qsl, urlencode, urlsplit
 
 from pydantic import BaseModel
 
+from factcheck.module.models import ManualRef, RefResult
+
 from .fetch import FetchError, fetch_text, youtube_id
 from .io import MIN_REF_CHARS, ref_problem, write_manual_list
-from .models import ManualRef, RefResult
 
 _FRONTMATTER = re.compile(r"\A---\s*\n.*?\n---[ \t]*\n", re.DOTALL)
 _REF_HEADER = re.compile(

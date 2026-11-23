@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from .models import Annotation, BlockResult, Label
+from factcheck.module.models import Annotation, BlockResult, Label
 
 NO_SOURCE = "[No source]"
 _QUOTE_LIMIT = 200

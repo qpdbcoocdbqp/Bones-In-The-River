@@ -2,10 +2,10 @@ import json
 
 import pytest
 
-from factcheck.llm import LLMTransportError
-from factcheck.models import Label, Reference
-from factcheck.text import parse_body
-from factcheck.verifier import MAX_QUOTE_CHARS, LLMVerifier, pick_best
+from factcheck.module.app.text import parse_body
+from factcheck.module.cite.verifier import MAX_QUOTE_CHARS, LLMVerifier, pick_best
+from factcheck.module.models import Label, Reference
+from factcheck.module.utils.llm import LLMTransportError
 from tests.fakes import FakeClient
 
 SOURCE = "We never control the entry point. Merchants keep their own customers and brand."
@@ -125,7 +125,7 @@ def test_pick_best_prefers_supported_then_partial_then_notes():
 
 
 def _j(label: Label):
-    from factcheck.models import Judgement
+    from factcheck.module.models import Judgement
 
     return Judgement(sentence_id="p1s1", ref_id="r1", label=label)
 

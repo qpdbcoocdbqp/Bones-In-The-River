@@ -2,7 +2,7 @@ from itertools import pairwise
 
 import pytest
 
-from factcheck.text import (
+from factcheck.module.app.text import (
     chunk_spans,
     locate_quote,
     parse_body,
@@ -86,7 +86,7 @@ def test_locate_quote_not_found_and_too_short():
 
 
 def test_means_nothing():
-    from factcheck.text import means_nothing
+    from factcheck.module.app.text import means_nothing
 
     assert all(means_nothing(v) for v in ("", " none ", "None.", "N/A", "無", "沒有。"))
     assert not means_nothing("沒有提到品牌")
