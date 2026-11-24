@@ -20,7 +20,8 @@ from .module.cite.evaluate import (
     sentence_ids,
     weights_from_meta,
 )
-from .module.cite.verifier import LLMVerifier
+from .module.cite.retrieval import RetrievalVerifier
+from .module.cite.verifier import LLMVerifier, Verifier
 from .module.refer.fetch import BrowserFetcher, FetchError
 from .module.refer.io import (
     MIN_REF_CHARS,
@@ -36,6 +37,7 @@ from .module.refer.io import (
     write_sample_meta,
 )
 from .module.refer.prep import prep
+from .module.utils.embed import OpenAICompatEmbedder, make_reranker
 from .module.utils.llm import LLMError, OpenAICompatClient
 
 app = typer.Typer(add_completion=False, no_args_is_help=True)
@@ -64,13 +66,56 @@ def mark(
     min_ref_chars: Annotated[
         int, typer.Option(help="Skip references with less text than this (failed downloads)")
     ] = MIN_REF_CHARS,
+    retrieve: Annotated[
+        bool,
+        typer.Option(
+            help="Embedding recall + rerank picks the passages the LLM reads (needs EMBED_MODEL; "
+            "uses RERANK_MODEL if set)"
+        ),
+    ] = False,
+    embed_model: Annotated[
+        str | None, typer.Option(help="With --retrieve: overrides EMBED_MODEL")
+    ] = None,
+    rerank_model: Annotated[
+        str | None, typer.Option(help="With --retrieve: overrides RERANK_MODEL")
+    ] = None,
+    recall_k: Annotated[int, typer.Option(help="With --retrieve: passages kept by embedding")] = 20,
+    top_k: Annotated[
+        int, typer.Option(help="With --retrieve: passages shown to the LLM after rerank")
+    ] = 3,
+    min_score: Annotated[
+        float | None,
+        typer.Option(
+            help="With --retrieve: skip the LLM when the best rerank score is below this "
+            "(scores depend on the rerank model; tune it with eval)"
+        ),
+    ] = None,
+    workers: Annotated[int, typer.Option(help="With --retrieve: parallel sentences")] = 4,
 ) -> None:
     try:
         client = OpenAICompatClient(model, env_file)
-    except (LLMError, ImportError) as exc:
+        verifier: Verifier
+        if retrieve:
+            reranker = make_reranker(rerank_model, env_file)
+            if reranker is None:
+                typer.echo("No RERANK_MODEL: ranking by embedding similarity only", err=True)
+            verifier = RetrievalVerifier(
+                client,
+                OpenAICompatEmbedder(embed_model, env_file),
+                reranker,
+                recall_k=recall_k,
+                top_k=top_k,
+                min_score=min_score,
+                workers=workers,
+                retries=retries,
+            )
+        else:
+            verifier = LLMVerifier(
+                client, max_chars=max_chars, batch_size=batch_size, retries=retries
+            )
+    except (LLMError, ImportError, ValueError) as exc:
         typer.echo(f"Cannot create LLM backend: {exc}", err=True)
         raise typer.Exit(code=2) from exc
-    verifier = LLMVerifier(client, max_chars=max_chars, batch_size=batch_size, retries=retries)
     try:
         references, skipped = screen_references(load_references(refs), refs, min_ref_chars)
         if not references:

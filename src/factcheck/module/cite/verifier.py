@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import threading
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from itertools import batched
@@ -90,6 +91,7 @@ class LLMVerifier:
         self._batch_size = batch_size
         self._retries = retries
         self._transport_failures = 0
+        self._lock = threading.Lock()  # _call may run on several threads (RetrievalVerifier)
 
     def verify(self, sentences: Sequence[Sentence], reference: Reference) -> VerifyResult:
         self._transport_failures = 0
@@ -124,33 +126,48 @@ class LLMVerifier:
         claims = {s.id: s.claim for s in sentences}
         judgements: dict[str, Judgement] = {}
         for sid, found in candidates.items():
-            # Stage 2: strictly check supported candidates one by one until one passes. Checking
-            # only the first would
-            # be wrong: if it gets downgraded, a better quote in a later chunk would never get a
-            # chance.
-            confirmed: list[Judgement] = []
-            for judgement in (j for j in found if j.label is Label.SUPPORTED):
-                calls += 1
-                confirmed.append(self._confirm(judgement, claims[sid], errors))
-                if confirmed[-1].label is Label.SUPPORTED:
-                    break
-            rest = [j for j in found if j.label is Label.NOT_ENOUGH_INFO]
-            judgements[sid] = pick_best(sid, reference.id, confirmed + rest)
+            judgements[sid], extra = self._resolve(sid, claims[sid], reference.id, found, errors)
+            calls += extra
         return VerifyResult(judgements=judgements, errors=errors, calls=calls)
+
+    def _resolve(
+        self,
+        sentence_id: str,
+        claim: str,
+        ref_id: str,
+        found: Sequence[Judgement],
+        errors: list[str],
+    ) -> tuple[Judgement, int]:
+        """Stage 2: strictly check supported candidates one by one until one passes. Checking only
+        the first would be wrong: if it gets downgraded, a better quote in a later chunk would never
+        get a chance. Returns the final judgement and the number of check calls made."""
+        calls = 0
+        confirmed: list[Judgement] = []
+        for judgement in (j for j in found if j.label is Label.SUPPORTED):
+            calls += 1
+            confirmed.append(self._confirm(judgement, claim, errors))
+            if confirmed[-1].label is Label.SUPPORTED:
+                break
+        rest = [j for j in found if j.label is Label.NOT_ENOUGH_INFO]
+        return pick_best(sentence_id, ref_id, confirmed + rest), calls
 
     def _call[T: BaseModel](
         self, prompt: str, schema: type[T], where: str, errors: list[str]
     ) -> T | None:
         """Call and validate; on failure record it and return None. Abort the whole run after
         repeated connection failures."""
+        if self._transport_failures >= MAX_TRANSPORT_FAILURES:  # another thread already gave up
+            raise LLMTransportError("aborting: repeated connection failures")
         try:
             result = complete_json(
                 self._client, prompt, schema, system=SYSTEM, retries=self._retries
             )
         except LLMTransportError as exc:
-            self._transport_failures += 1
+            with self._lock:
+                self._transport_failures += 1
+                failures = self._transport_failures
             errors.append(f"{where} {exc}")
-            if self._transport_failures >= MAX_TRANSPORT_FAILURES:
+            if failures >= MAX_TRANSPORT_FAILURES:
                 raise LLMTransportError(
                     f"{MAX_TRANSPORT_FAILURES} consecutive connection failures, aborting: {exc}"
                 ) from exc
