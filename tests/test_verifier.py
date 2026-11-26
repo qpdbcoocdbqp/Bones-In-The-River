@@ -283,3 +283,16 @@ def test_consecutive_transport_failures_abort_the_run():
     with pytest.raises(LLMTransportError, match="3 consecutive"):
         verifier.verify(_sentences(), Reference(id="r1", text=source))
     assert client.calls == 3  # 連線失敗不重試，第 3 次就中止
+
+
+def test_confirm_response_accepts_null_missing():
+    from factcheck.module.cite.verifier import ConfirmResponse
+
+    assert ConfirmResponse.model_validate({"verdict": "full", "missing": None}).missing == ""
+
+
+def test_confirm_response_joins_a_list_of_missing_claims():
+    from factcheck.module.cite.verifier import ConfirmResponse
+
+    result = ConfirmResponse.model_validate({"verdict": "partial", "missing": ["a", "b"]})
+    assert result.missing == "a; b"

@@ -58,6 +58,7 @@ class RetrievalVerifier(LLMVerifier):
         top_k: int = 3,
         pad: int = 100,
         min_score: float | None = None,
+        top_refs: int | None = None,
         workers: int = 4,
         retries: int = 2,
     ) -> None:
@@ -65,6 +66,8 @@ class RetrievalVerifier(LLMVerifier):
             raise ValueError("need 1 <= top_k <= recall_k")
         if workers < 1:
             raise ValueError("workers must be at least 1")
+        if top_refs is not None and top_refs < 1:
+            raise ValueError("top_refs must be at least 1")
         super().__init__(client, retries=retries)
         self.prompt_version = f"{PROMPT_VERSION}+retrieve"
         self._embedder = embedder
@@ -75,35 +78,72 @@ class RetrievalVerifier(LLMVerifier):
         self._top_k = top_k
         self._pad = pad
         self._min_score = min_score
+        self._top_refs = top_refs
         self._workers = workers
+        self._index: dict[str, tuple[list[tuple[int, int]], Vectors]] = {}  # per reference
+        self._allowed: set[tuple[str, str]] | None = None  # (sentence id, ref id) to judge
         self._claim_vecs: dict[str, Vectors] = {}  # claim -> unit vector, reused across references
+
+    def prepare(self, sentences: Sequence[Sentence], references: Sequence[Reference]) -> None:
+        """With top_refs: keep, for each sentence, only the references holding its most similar
+        passages. Embeddings are cheap next to LLM calls, so this prunes most pairs up front. (On
+        examples/shopify the true quotes sat in the top-1 reference 8 times out of 9, top-2: 9.)
+        """
+        if self._top_refs is None or not sentences:
+            return
+        claims = self._claim_matrix(sentences)
+        best = np.full((len(sentences), len(references)), -np.inf)
+        for r, reference in enumerate(references):
+            _, vectors = self._passages(reference)
+            if len(vectors):
+                best[:, r] = (claims @ vectors.T).max(axis=1)
+        self._allowed = {
+            (sentence.id, references[r].id)
+            for i, sentence in enumerate(sentences)
+            for r in np.argsort(-best[i])[: self._top_refs]
+        }
+
+    def _passages(self, reference: Reference) -> tuple[list[tuple[int, int]], Vectors]:
+        """Passage spans of a reference and their unit vectors (embedded once per reference)."""
+        if reference.id not in self._index:
+            text = reference.text
+            spans = [
+                (a, b)
+                for a, b in chunk_spans(text, self._passage_chars, self._passage_overlap)
+                if text[a:b].strip()
+            ]
+            vectors = (
+                _unit(self._embedder.embed([text[a:b] for a, b in spans]))
+                if spans
+                else np.empty((0, 0))
+            )
+            self._index[reference.id] = (spans, vectors)
+        return self._index[reference.id]
 
     def verify(self, sentences: Sequence[Sentence], reference: Reference) -> VerifyResult:
         self._transport_failures = 0
-        text = reference.text
-        spans = [
-            (a, b)
-            for a, b in chunk_spans(text, self._passage_chars, self._passage_overlap)
-            if text[a:b].strip()
+        spans, passage_vecs = self._passages(reference)
+        judgements = {
+            s.id: Judgement(sentence_id=s.id, ref_id=reference.id, label=Label.NOT_ENOUGH_INFO)
+            for s in sentences
+        }
+        todo = [
+            s
+            for s in sentences
+            if spans and (self._allowed is None or (s.id, reference.id) in self._allowed)
         ]
-        if not spans or not sentences:
-            empty = {
-                s.id: Judgement(sentence_id=s.id, ref_id=reference.id, label=Label.NOT_ENOUGH_INFO)
-                for s in sentences
-            }
-            return VerifyResult(judgements=empty)
-        passage_vecs = _unit(self._embedder.embed([text[a:b] for a, b in spans]))
-        similarity = self._claim_matrix(sentences) @ passage_vecs.T  # (sentences, passages)
+        if not todo:
+            return VerifyResult(judgements=judgements)
+        similarity = self._claim_matrix(todo) @ passage_vecs.T  # (sentences, passages)
 
-        judgements: dict[str, Judgement] = {}
         errors: list[str] = []
         calls = 0
         with ThreadPoolExecutor(max_workers=self._workers) as pool:
             futures = [
                 pool.submit(self._verify_sentence, s, similarity[i], spans, reference)
-                for i, s in enumerate(sentences)
+                for i, s in enumerate(todo)
             ]
-            for sentence, future in zip(sentences, futures, strict=True):
+            for sentence, future in zip(todo, futures, strict=True):
                 judgement, used, found_errors = future.result()
                 judgements[sentence.id] = judgement
                 calls += used

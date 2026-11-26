@@ -90,6 +90,13 @@ def mark(
             "(scores depend on the rerank model; tune it with eval)"
         ),
     ] = None,
+    top_refs: Annotated[
+        int | None,
+        typer.Option(
+            help="With --retrieve: judge each sentence only against the N references "
+            "with the most similar passages (default: all)"
+        ),
+    ] = None,
     workers: Annotated[int, typer.Option(help="With --retrieve: parallel sentences")] = 4,
 ) -> None:
     try:
@@ -106,6 +113,7 @@ def mark(
                 recall_k=recall_k,
                 top_k=top_k,
                 min_score=min_score,
+                top_refs=top_refs,
                 workers=workers,
                 retries=retries,
             )

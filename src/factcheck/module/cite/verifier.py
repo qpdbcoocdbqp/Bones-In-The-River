@@ -4,7 +4,7 @@ import threading
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from itertools import batched
-from typing import Any, Literal, Protocol
+from typing import Any, Literal, Protocol, runtime_checkable
 
 from pydantic import BaseModel, Field, ValidationError, field_validator
 
@@ -48,6 +48,17 @@ class ConfirmResponse(BaseModel):
     verdict: Literal["full", "partial", "unrelated"]
     missing: str = ""  # details the quote does not state
 
+    @field_validator("missing", mode="before")
+    @classmethod
+    def _flatten(cls, value: object) -> object:
+        """The model sometimes answers `"missing": null` (nothing missing) or a list of the missing
+        claims instead of one string."""
+        if value is None:
+            return ""
+        if isinstance(value, list):
+            return "; ".join(str(item) for item in value)
+        return value
+
 
 @dataclass
 class VerifyResult:
@@ -63,6 +74,14 @@ class Verifier(Protocol):
     prompt_version: str
 
     def verify(self, sentences: Sequence[Sentence], reference: Reference) -> VerifyResult: ...
+
+
+@runtime_checkable
+class Preparing(Protocol):
+    """Optional: a verifier that wants to see all sentences and references before the first
+    verify call (e.g. to skip unlikely sentence/reference pairs)."""
+
+    def prepare(self, sentences: Sequence[Sentence], references: Sequence[Reference]) -> None: ...
 
 
 def pick_best(sentence_id: str, ref_id: str, candidates: Sequence[Judgement]) -> Judgement:

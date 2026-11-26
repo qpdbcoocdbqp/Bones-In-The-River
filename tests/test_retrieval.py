@@ -4,6 +4,7 @@ from collections.abc import Sequence
 import pytest
 
 from factcheck.module.app.text import parse_body
+from factcheck.module.cite.annotate import annotate
 from factcheck.module.cite.retrieval import RetrievalVerifier, merge_ranges
 from factcheck.module.models import Label, Reference
 from factcheck.module.utils.llm import LLMTransportError
@@ -135,3 +136,17 @@ def test_connection_failures_abort():
     verifier = RetrievalVerifier(FakeClient(down), FakeEmbedder(), workers=1)
     with pytest.raises(LLMTransportError):
         verifier.verify(sentences, Reference(id="r1", text=SOURCE))
+
+
+def test_top_refs_judges_each_sentence_only_against_its_closest_reference():
+    prompts: list[str] = []
+    verifier = RetrievalVerifier(FakeClient(_llm(prompts)), FakeEmbedder(), top_k=1, top_refs=1)
+    refs = [
+        Reference(id="weather", text=FILLER),
+        Reference(id="merchants", text=SOURCE),
+    ]
+    annotation = annotate("merchants customers brand。", refs, verifier)
+    by_ref = {j.ref_id: j for j in annotation.blocks[0].results[0].judgements}
+    assert by_ref["merchants"].label is Label.SUPPORTED
+    assert by_ref["weather"].label is Label.NOT_ENOUGH_INFO
+    assert len([p for p in prompts if "<statements>" in p]) == 1  # the other pair was never judged

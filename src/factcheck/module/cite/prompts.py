@@ -4,7 +4,7 @@ from collections.abc import Sequence
 
 from factcheck.module.models import Sentence
 
-PROMPT_VERSION = "judge-v5"
+PROMPT_VERSION = "judge-v6"
 
 SYSTEM = (
     "You are a meticulous citation checker. You compare statements against ONE source "
@@ -53,20 +53,29 @@ _CONFIRM_TEMPLATE = """STATEMENT (Chinese):
 QUOTE (from the document "{doc}"):
 {quote}
 
-Does the QUOTE state everything the STATEMENT claims?
+Does the QUOTE state everything the STATEMENT claims? Split the STATEMENT into its separate \
+claims (facts, numbers, comparisons, conditions, causes, time frames) and look for each one in \
+the QUOTE.
 - Details implied by the document itself are NOT missing: who is speaking, and which company \
 or period the document covers (the document name tells you).
 - The same meaning in different words is NOT missing (e.g. "AI-attributed orders" and \
 "orders brought by AI").
-- A detail IS missing if the statement asserts a number, comparison, cause-effect link, scope \
-or qualifier that the quote does not state, or goes beyond what the quote says.
-- "full": the quote states all of it.
+- A claim IS missing if the QUOTE does not itself say it. In particular, the statement going \
+beyond the quote is "partial" even when the topic and direction agree: an added condition \
+("if ..."), an added cause or reason ("because", "this is why", "this is the background of"), \
+a claim about the past or the future that the quote does not make, an extra subject or \
+qualifier (e.g. "independent brands", "small brands", "all"), a number, a comparison, or a \
+conclusion that the reader would have to infer from the quote.
+- "A related, supporting or consistent remark" is NOT enough. Ask: if the QUOTE were the only \
+thing a reader saw, could they write this exact STATEMENT without adding anything of their own?
+- "full": yes, every claim in the STATEMENT is in the QUOTE.
 - "partial": the quote states only some of it, or is only on the same topic or consistent \
-with it.
+with it, or the statement adds something of the kinds above.
 - "unrelated": the quote does not address the statement.
-Answer with one JSON object only: \
-{{"verdict": "full" | "partial" | "unrelated", \
-"missing": "<what the quote does not state, in English, or none>"}}
+Answer with one JSON object only, listing what is missing BEFORE the verdict: \
+{{"missing": "<ONE string: the claims of the statement the quote does not state, in English, \
+separated by semicolons; or none>", \
+"verdict": "full" | "partial" | "unrelated"}}
 """
 
 

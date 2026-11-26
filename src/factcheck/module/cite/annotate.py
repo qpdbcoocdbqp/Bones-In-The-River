@@ -5,7 +5,7 @@ from collections.abc import Callable, Sequence
 from factcheck.module.app.text import parse_body
 from factcheck.module.models import Annotation, BlockResult, Reference, RunMeta, SentenceResult
 
-from .verifier import Verifier
+from .verifier import Preparing, Verifier
 
 
 def annotate(
@@ -25,6 +25,8 @@ def annotate(
     per_reference = {}
     errors: list[str] = []
     calls = 0
+    if isinstance(verifier, Preparing):
+        verifier.prepare(sentences, references)
     for reference in references:
         if on_progress:
             on_progress(f"Checking {reference.id} ({len(sentences)} sentences)")
