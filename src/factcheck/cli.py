@@ -58,6 +58,32 @@ def mark(
         ".env"
     ),
     model: Annotated[str | None, typer.Option(help="Model name; defaults to MODEL in .env")] = None,
+    base_url: Annotated[
+        str | None, typer.Option(help="LLM endpoint; defaults to BASE_URL in .env")
+    ] = None,
+    api_key: Annotated[
+        str | None, typer.Option(help="LLM API key; defaults to API_KEY in .env")
+    ] = None,
+    embed_base_url: Annotated[
+        str | None,
+        typer.Option(
+            help="With --retrieve: embedding endpoint; defaults to EMBED_BASE_URL, BASE_URL"
+        ),
+    ] = None,
+    embed_api_key: Annotated[
+        str | None,
+        typer.Option(help="With --retrieve: embedding key; defaults to EMBED_API_KEY, API_KEY"),
+    ] = None,
+    rerank_base_url: Annotated[
+        str | None,
+        typer.Option(
+            help="With --retrieve: rerank endpoint; defaults to RERANK_BASE_URL, BASE_URL"
+        ),
+    ] = None,
+    rerank_api_key: Annotated[
+        str | None,
+        typer.Option(help="With --retrieve: rerank key; defaults to RERANK_API_KEY, API_KEY"),
+    ] = None,
     max_chars: Annotated[
         int, typer.Option(help="Split a reference into chunks only above this length")
     ] = 30_000,
@@ -100,15 +126,17 @@ def mark(
     workers: Annotated[int, typer.Option(help="With --retrieve: parallel sentences")] = 4,
 ) -> None:
     try:
-        client = OpenAICompatClient(model, env_file)
+        client = OpenAICompatClient(model, env_file, base_url=base_url, api_key=api_key)
         verifier: Verifier
         if retrieve:
-            reranker = make_reranker(rerank_model, env_file)
+            reranker = make_reranker(rerank_model, env_file, rerank_base_url, rerank_api_key)
             if reranker is None:
                 typer.echo("No RERANK_MODEL: ranking by embedding similarity only", err=True)
             verifier = RetrievalVerifier(
                 client,
-                OpenAICompatEmbedder(embed_model, env_file),
+                OpenAICompatEmbedder(
+                    embed_model, env_file, base_url=embed_base_url, api_key=embed_api_key
+                ),
                 reranker,
                 recall_k=recall_k,
                 top_k=top_k,

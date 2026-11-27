@@ -36,7 +36,7 @@ class OpenAICompatClient:
     """OpenAI-compatible endpoint (e.g. llama.cpp, vLLM, LM Studio).
 
     Configuration comes from .env or environment variables: BASE_URL, API_KEY, MODEL (the `model`
-    argument overrides MODEL).
+    argument overrides MODEL; the `base_url` / `api_key` arguments override BASE_URL / API_KEY).
     Environment variables take precedence over the .env file.
     """
 
@@ -45,6 +45,8 @@ class OpenAICompatClient:
         model: str | None = None,
         env_file: Path = Path(".env"),
         timeout: float = 900.0,
+        base_url: str | None = None,
+        api_key: str | None = None,
     ) -> None:
         from dotenv import dotenv_values  # lazy: not needed unless this backend is used
         from openai import OpenAI
@@ -54,7 +56,8 @@ class OpenAICompatClient:
         def setting(name: str) -> str | None:
             return os.environ.get(name) or file_values.get(name)
 
-        base_url, api_key = setting("BASE_URL"), setting("API_KEY")
+        base_url = base_url or setting("BASE_URL")
+        api_key = api_key or setting("API_KEY")
         resolved_model = model or setting("MODEL")
         missing = [
             n

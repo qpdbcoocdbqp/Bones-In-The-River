@@ -39,10 +39,15 @@ def _setting(name: str, env_file: Path, default: str) -> str:
 
 
 def _resolve(
-    prefix: str, model: str | None, env_file: Path
+    prefix: str,
+    model: str | None,
+    env_file: Path,
+    base_url: str | None = None,
+    api_key: str | None = None,
 ) -> tuple[str | None, str | None, str | None]:
-    """(model, base_url, api_key) for `<prefix>_MODEL/_BASE_URL/_API_KEY`, falling back to the
-    chat settings BASE_URL / API_KEY. Environment variables take precedence over the .env file."""
+    """(model, base_url, api_key): explicit arguments first, then `<prefix>_MODEL/_BASE_URL/
+    _API_KEY`, falling back to the chat settings BASE_URL / API_KEY. Environment variables take
+    precedence over the .env file."""
     from dotenv import dotenv_values  # lazy, like OpenAICompatClient
 
     file_values = dotenv_values(env_file) if env_file.exists() else {}
@@ -52,8 +57,8 @@ def _resolve(
 
     return (
         model or setting(f"{prefix}_MODEL"),
-        setting(f"{prefix}_BASE_URL") or setting("BASE_URL"),
-        setting(f"{prefix}_API_KEY") or setting("API_KEY"),
+        base_url or setting(f"{prefix}_BASE_URL") or setting("BASE_URL"),
+        api_key or setting(f"{prefix}_API_KEY") or setting("API_KEY"),
     )
 
 
@@ -84,10 +89,12 @@ class OpenAICompatEmbedder:
         env_file: Path = Path(".env"),
         batch_size: int = 32,
         timeout: float = 300.0,
+        base_url: str | None = None,
+        api_key: str | None = None,
     ) -> None:
         from openai import OpenAI
 
-        name, base_url, api_key = _resolve("EMBED", model, env_file)
+        name, base_url, api_key = _resolve("EMBED", model, env_file, base_url, api_key)
         missing = [
             n
             for n, v in (("EMBED_MODEL", name), ("BASE_URL", base_url), ("API_KEY", api_key))
@@ -150,10 +157,15 @@ class HTTPReranker:
         return scores
 
 
-def make_reranker(model: str | None = None, env_file: Path = Path(".env")) -> HTTPReranker | None:
+def make_reranker(
+    model: str | None = None,
+    env_file: Path = Path(".env"),
+    base_url: str | None = None,
+    api_key: str | None = None,
+) -> HTTPReranker | None:
     """A reranker from RERANK_MODEL / RERANK_BASE_URL / RERANK_API_KEY (the last two default to
     BASE_URL / API_KEY). None if no rerank model is configured."""
-    name, base_url, api_key = _resolve("RERANK", model, env_file)
+    name, base_url, api_key = _resolve("RERANK", model, env_file, base_url, api_key)
     if not name:
         return None
     if not base_url or not api_key:

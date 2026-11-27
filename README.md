@@ -26,7 +26,9 @@ BASE_URL=<OpenAI-compatible endpoint, e.g. local llama.cpp>
 API_KEY=<key>
 MODEL=<model name>
 ```
-Environment variables win over `.env`.
+Environment variables win over `.env`. See [.env.example](.env.example) for every setting.
+
+With `mark --retrieve`, embedding and rerank can use their own endpoint: `EMBED_MODEL` / `EMBED_BASE_URL` / `EMBED_API_KEY` and `RERANK_MODEL` / `RERANK_BASE_URL` / `RERANK_API_KEY`. An empty URL or key falls back to `BASE_URL` / `API_KEY` (so the chat key is sent to that server too; set both when the server differs).
 
 ## Prepare inputs (optional)
 Starting from a clipped web article (Obsidian Web Clipper Markdown) whose "reference materials" list holds links:
@@ -54,6 +56,9 @@ PYTHONUTF8=1 PYTHONPATH=src python -m factcheck.cli mark \
 | `--refs` | Folder of reference `.txt` / `.md` files (file name = source id). Prepare the text yourself |
 | `--out` | Output folder |
 | `--model` | Override `MODEL` |
+| `--base-url`, `--api-key` | Override `BASE_URL` / `API_KEY` for the LLM |
+| `--embed-base-url`, `--embed-api-key` | With `--retrieve`: override `EMBED_BASE_URL` / `EMBED_API_KEY` |
+| `--rerank-base-url`, `--rerank-api-key` | With `--retrieve`: override `RERANK_BASE_URL` / `RERANK_API_KEY` |
 | `--max-chars` | Split a reference into chunks above this length (default 30000) |
 | `--batch-size` | Sentences per call (default 20) |
 | `--retries` | Retry count |

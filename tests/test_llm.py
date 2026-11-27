@@ -46,6 +46,23 @@ def test_openai_client_env_var_beats_env_file(tmp_path, monkeypatch):
     assert OpenAICompatClient(env_file=env).model == "from-env"
 
 
+def test_openai_client_explicit_base_url_and_key_beat_env_file(tmp_path, monkeypatch):
+    _clear_settings(monkeypatch)
+    env = tmp_path / ".env"
+    env.write_text("BASE_URL=http://file:9/v1\nMODEL=m\nAPI_KEY=file-key\n", encoding="utf-8")
+    client = OpenAICompatClient(env_file=env, base_url="http://arg:9/v1", api_key="arg-key")
+    assert str(client._client.base_url).startswith("http://arg:9/v1")
+    assert client._client.api_key == "arg-key"
+
+
+def test_openai_client_explicit_settings_need_no_env_file(tmp_path, monkeypatch):
+    _clear_settings(monkeypatch)
+    client = OpenAICompatClient(
+        "m", env_file=tmp_path / "missing.env", base_url="http://arg:9/v1", api_key="k"
+    )
+    assert client.model == "m"
+
+
 def test_openai_client_missing_settings_names_them(tmp_path, monkeypatch):
     _clear_settings(monkeypatch)
     env = tmp_path / ".env"
