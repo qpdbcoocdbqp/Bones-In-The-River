@@ -3,7 +3,9 @@ import { build } from "esbuild";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { parseAnnotated } from "./src/parse.ts";
 
-const NAMES = ["coreweave", "shopify", "figma"];
+const { names: NAMES } = JSON.parse(
+  await readFile(new URL("./docs.config.json", import.meta.url), "utf8"),
+);
 const docs = [];
 for (const name of NAMES) {
   const md = await readFile(new URL(`../out/${name}/annotated.md`, import.meta.url), "utf8");

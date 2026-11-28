@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Annotated
 
 import typer
 
+from .module.app.golden import golden_annotation
 from .module.app.render import to_markdown
 from .module.app.sheet import sample_meta, sheet_rows
 from .module.cite.annotate import annotate
@@ -240,6 +242,25 @@ def prep_command(
             err=True,
         )
         raise typer.Exit(code=1)
+
+
+@app.command()
+def golden(
+    example: Annotated[Path, typer.Option(help="Example folder holding body.md and golden.json")],
+    out: Annotated[
+        Path | None, typer.Option(help="Output folder (default: out/<example name>_golden)")
+    ] = None,
+) -> None:
+    """Render a human golden.json as annotated.md, in the same format as 'mark' (for the viewer)."""
+    out = out or Path("out") / f"{example.name}_golden"
+    try:
+        gold = json.loads((example / "golden.json").read_text(encoding="utf-8"))
+        annotation = golden_annotation(load_body(example / "body.md"), gold)
+    except (OSError, ValueError, KeyError) as exc:  # JSONDecodeError is a ValueError
+        typer.echo(f"Cannot convert golden: {exc!r}", err=True)
+        raise typer.Exit(code=2) from exc
+    md_path, _ = write_outputs(annotation, to_markdown(annotation), out)
+    typer.echo(f"Wrote {md_path}")
 
 
 @app.command()

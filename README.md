@@ -69,6 +69,24 @@ Exit codes: `0` ok, `1` some calls failed (results written but incomplete), `2` 
 - `out/.../annotated.md`: your article plus `[Source: id]` / `[Partial: id]` / `[No source]` after each paragraph. `[No source]` doesn't mean it's wrong.
 - `out/.../annotations.json`: per-sentence details.
 
+## Viewer
+A single-file HTML viewer for `annotated.md`, in [viewer/](viewer/). Needs Node.js.
+
+```bash
+cd viewer
+npm install   # once
+npm run build # writes dist/index.html
+```
+Open `viewer/dist/index.html` in a browser. Data is embedded at build time, so the page loads nothing else; after changing any `annotated.md`, build again.
+
+Which documents go in is set by `names` in [viewer/docs.config.json](viewer/docs.config.json). Each name needs `out/<name>/annotated.md` (the output of `mark`), otherwise the build fails.
+
+```json
+{ "names": ["coreweave", "shopify", "figma"] }
+```
+
+Also: `npm run typecheck`, `npm test`.
+
 ## Dev checks
 ```bash
 export PYTHONUTF8=1
